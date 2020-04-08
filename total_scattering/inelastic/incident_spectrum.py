@@ -1,7 +1,7 @@
 import sys
 import json
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from scipy import signal, ndimage, interpolate, optimize
 
 from mantid import mtd
