@@ -12,14 +12,7 @@
              "Geometry" : {"Radius" : 0.15,
                            "Height" : 1.8 },
              "AbsorptionCorrection" : { "Type" : "Carpenter" },
-             "MultipleScatteringCorrection" : { "Type" : "Carpenter" },
-             "InelasticCorrection" : { "Type" : "Placzek",
-                                       "Order" : "1st",
-                                       "Self" : true,
-                                       "Interference" : false,
-                                       "FitSpectrumWith" : "GaussConvCubicSpline",
-                                       "LambdaBinningForFit"  : "0.16,0.04,2.8",
-                                       "LambdaBinningForCalc" : "0.16,0.0001,2.9"}
+             "MultipleScatteringCorrection" : { "Type" : "Carpenter" }
             },
     "Normalization": { "Runs" : "91603",
                   "Background" : { "Runs" : "91607" },
@@ -29,14 +22,7 @@
                   "Geometry" : {"Radius" : 0.2925,
                                 "Height" : 1.8 },
                   "AbsorptionCorrection" : { "Type" : "Carpenter" },
-                  "MultipleScatteringCorrection" : { "Type" : "Carpenter" },
-                  "InelasticCorrection" : { "Type" : "Placzek",
-                                            "Order" : "1st",
-                                            "Self" : true,
-                                            "Interference" : false,
-                                            "FitSpectrumWith" : "GaussConvCubicSpline",
-                                            "LambdaBinningForFit"  : "0.16,0.04,2.8",
-                                            "LambdaBinningForCalc" : "0.1,0.0001,3.0"}
+                  "MultipleScatteringCorrection" : { "Type" : "Carpenter" }
                 },
     "Calibration":{"Filename":"/SNS/NOM/shared/CALIBRATION/2017_1_1B_CAL/NOM_d91621_2017_04_12_shifter.h5"},
     "AlignAndFocusArgs" : { "TMin" : 300.0, "TMax" : 16667.0 },
