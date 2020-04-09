@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from total_scattering.file_handling.load import load
+from total_scattering.file_handling import load
 from tests import EXAMPLE_DIR, TEST_DATA_DIR
 
 from mantid.simpleapi import mtd
