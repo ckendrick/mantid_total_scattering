@@ -81,7 +81,7 @@ matrix:
 before_install:
   - | 
     if [[ "${TYPE}" == "docker" ]]; then
-      docker build -t test-env -f .ci/Dockerfile.nightly_ubuntu16.04_python3 .;
+      docker build -t test-env -f .ci/Dockerfile .;
       test_cmd=`./.ci/construct_test_command.sh`;
     fi
 
@@ -128,7 +128,7 @@ script:
   - |
     if [[ "${TYPE}" == "docker" ]]; then
       docker run -t test-env /bin/bash -c "$test_cmd";
-      sudo python setup.py install;
+      docker run -t test-env /bin/bash -c "flake8 .";
     fi
 
   - |
