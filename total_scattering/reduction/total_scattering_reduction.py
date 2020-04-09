@@ -2,7 +2,6 @@
 from __future__ import (absolute_import, division, print_function)
 
 import os
-import itertools
 import numpy as np
 from scipy.constants import Avogadro
 
@@ -34,8 +33,8 @@ from mantid.simpleapi import \
     SetUncertainties, \
     StripVanadiumPeaks
 
-from total_scattering.file_handling.load import load
-from total_scattering.file_handling.save import save_banks
+from total_scattering import utils
+from total_scattering.file_handling import load, save_banks
 from total_scattering.inelastic.placzek import \
     CalculatePlaczekSelfScattering, \
     FitIncidentSpectrum, \
@@ -86,51 +85,6 @@ def get_each_spectra_xmin_xmax(wksp):
         xmax.append(np.nanmax(x[x != np.inf]))
     return xmin, xmax
 
-# -----------------------------------------------------
-# Function to expand string of ints with dashes
-# Ex. "1-3, 8-9, 12" -> [1,2,3,8,9,12]
-
-
-def expand_ints(s):
-    spans = (el.partition('-')[::2] for el in s.split(','))
-    ranges = (range(int(s), int(e) + 1 if e else int(s) + 1)
-              for s, e in spans)
-    all_nums = itertools.chain.from_iterable(ranges)
-    return list(all_nums)
-
-# -------------------------------------------------------------------------
-# Function to compress list of ints with dashes
-# Ex. [1,2,3,8,9,12] -> 1-3, 8-9, 12
-
-
-def compress_ints(line_nums):
-    seq = []
-    final = []
-    last = 0
-
-    for index, val in enumerate(line_nums):
-
-        if last + 1 == val or index == 0:
-            seq.append(val)
-            last = val
-        else:
-            if len(seq) > 1:
-                final.append(str(seq[0]) + '-' + str(seq[len(seq) - 1]))
-            else:
-                final.append(str(seq[0]))
-            seq = []
-            seq.append(val)
-            last = val
-
-        if index == len(line_nums) - 1:
-            if len(seq) > 1:
-                final.append(str(seq[0]) + '-' + str(seq[len(seq) - 1]))
-            else:
-                final.append(str(seq[0]))
-
-    final_str = ', '.join(map(str, final))
-    return final_str
-
 # -------------------------------------------------------------------------
 # Volume in Beam
 
@@ -138,9 +92,6 @@ def compress_ints(line_nums):
 class Shape(object):
     def __init__(self):
         self.shape = None
-
-    def getShape(self):
-        return self.shape
 
 
 class Cylinder(Shape):
@@ -160,7 +111,6 @@ class Sphere(Shape):
 
 
 class GeometryFactory(object):
-
     @staticmethod
     def factory(Geometry):
         factory = {"Cylinder": Cylinder(),
@@ -168,7 +118,7 @@ class GeometryFactory(object):
         return factory[Geometry["Shape"]]
 
 
-def getNumberAtoms(PackingFraction, MassDensity, MolecularMass, Geometry=None):
+def get_number_atoms(PackingFraction, MassDensity, MolecularMass, Geometry=None):
     # setup the geometry of the sample
     if Geometry is None:
         Geometry = dict()
@@ -184,9 +134,8 @@ def getNumberAtoms(PackingFraction, MassDensity, MolecularMass, Geometry=None):
     natoms = number_density * volume_in_beam  # atoms
     return natoms
 
+
 # Event Filters
-
-
 def GenerateEventsFilterFromFiles(filenames, OutputWorkspace,
                                   InformationWorkspace, **kwargs):
 
@@ -217,27 +166,6 @@ def GenerateEventsFilterFromFiles(filenames, OutputWorkspace,
             mtd[InformationWorkspace].add(infows)
     return
 
-# -------------------------------------------------------------------------
-# Utils
-
-
-def print_unit_info(workspace):
-    ws = mtd[workspace]
-    for i in range(ws.axes()):
-        axis = ws.getAxis(i)
-        print(
-            "Axis {0} is a {1}{2}{3}".format(
-                i,
-                "Spectrum Axis" if axis.isSpectra() else "",
-                "Text Axis" if axis.isText() else "",
-                "Numeric Axis" if axis.isNumeric() else ""))
-
-        unit = axis.getUnit()
-        print("\n YUnit:{0}".format(ws.YUnit()))
-        print("\t caption:{0}".format(unit.caption()))
-        print("\t symbol:{0}".format(unit.symbol()))
-    return
-
 
 def SetInelasticCorrection(inelastic_dict):
     default_inelastic_dict = {"Type": None}
@@ -265,111 +193,20 @@ def SetInelasticCorrection(inelastic_dict):
     return inelastic_settings
 
 
-def one_and_only_one(iterable):
-    """Determine if iterable (ie list) has one and only one `True` value
-
-    :param iterable: The iterable to check
-    :type iterable: list
-
-    :return: If there is one and only one True
-    :rtype: bool
-    """
-    try:
-        iterator = iter(iterable)
-        has_true = any(iterator)
-        has_another_true = any(iterator)
-        return has_true and not has_another_true
-    except Exception as e:
-        print(e)
-        raise
-
-
-def find_key_match_in_dict(keys, dictionary):
-    """ Check if one and only one of the keys is in the dictionary
-    and return its value
-
-    :param key: Keys we will check for in dictionary
-    :type key: str
-    :param dictionary: Dictionary to check
-    :type dictionary: dict
-
-    :return: Either the value in dictionary for the key or None if not found
-    :rtype: value in dict or None
-    """
-    # Get the boolean for each key if it exists in the dictionary
-    keys_exist_in_dict = map(lambda key: key in dictionary, keys)
-
-    # If only one exists, return the match, else raise exception
-    if one_and_only_one(keys_exist_in_dict):
-        for key in keys:
-            if key in dictionary:
-                return dictionary[key]
-
-    # None of the keys in the dictionary, return None
-    return None
-
-
-def extract_key_match_from_dict(keys, dictionary):
-    """ Convienence function for extraction of one key from dictionary
-
-    :param keys: Keys to check against dictionary
-    :type keys: list
-    :param dictionary: Dictionary to check
-    "type dictionary: dict
-
-    :return: The exctracted value
-    :rtype: any
-    """
-    out = find_key_match_in_dict(keys, dictionary)
-    if out:
-        return out
-    else:
-        e = "No matching key found. Valid keys are {}".format(keys)
-        raise Exception(e)
-
-
-def get_sample(config):
-    """ Extract the sample section from JSON input
-
-    :param config: JSON input for reduction
-    :type config: dict
-
-    :return: The exctracted value for sample in the input
-    :rtype: any
-    """
-    keys = ["Sample"]
-    out = extract_key_match_from_dict(keys, config)
-    return out
-
-
-def get_normalization(config):
-    """ Extract the normalization section from JSON input
-
-    :param config: JSON input for reduction
-    :type config: dict
-
-    :return: The exctracted value for normalization in the input
-    :rtype: any
-    """
-    keys = ["Normalization", "Normalisation", "Vanadium"]
-    out = extract_key_match_from_dict(keys, config)
-    return out
-
-
 def TotalScatteringReduction(config=None):
     facility = config['Facility']
     title = config['Title']
     instr = config['Instrument']
 
     # Get sample info
-    sample = get_sample(config)
+    sample = utils.get_sample(config)
     sam_mass_density = sample.get('MassDensity', None)
     sam_packing_fraction = sample.get('PackingFraction', None)
     sam_geometry = sample.get('Geometry', None)
     sam_material = sample.get('Material', None)
 
     # Get normalization info
-    van = get_normalization(config)
+    van = utils.get_normalization(config)
     van_mass_density = van.get('MassDensity', None)
     van_packing_fraction = van.get('PackingFraction', 1.0)
     van_geometry = van.get('Geometry', None)
@@ -386,8 +223,8 @@ def TotalScatteringReduction(config=None):
     OutputDir = config.get("OutputDir", os.path.abspath('.'))
 
     # Create Nexus file basenames
-    sample['Runs'] = expand_ints(sample['Runs'])
-    sample['Background']['Runs'] = expand_ints(
+    sample['Runs'] = utils.expand_ints(sample['Runs'])
+    sample['Background']['Runs'] = utils.expand_ints(
         sample['Background'].get('Runs', None))
 
     '''
@@ -419,21 +256,21 @@ def TotalScatteringReduction(config=None):
                                 for num in sample['Background']["Runs"]])
     container_bg = None
     if "Background" in sample['Background']:
-        sample['Background']['Background']['Runs'] = expand_ints(
+        sample['Background']['Background']['Runs'] = utils.expand_ints(
             sample['Background']['Background']['Runs'])
         container_bg = ','.join([facility_file_format % (
             instr, num) for num in sample['Background']['Background']['Runs']])
         if len(container_bg) == 0:
             container_bg = None
 
-    van['Runs'] = expand_ints(van['Runs'])
+    van['Runs'] = utils.expand_ints(van['Runs'])
     van_scans = ','.join([facility_file_format % (instr, num)
                           for num in van['Runs']])
 
     van_bg_scans = None
     if 'Background' in van:
         van_bg_scans = van['Background']['Runs']
-        van_bg_scans = expand_ints(van_bg_scans)
+        van_bg_scans = utils.expand_ints(van_bg_scans)
         van_bg_scans = ','.join([facility_file_format %
                                  (instr, num) for num in van_bg_scans])
 
@@ -532,24 +369,22 @@ def TotalScatteringReduction(config=None):
         sam_material,
         sam_mass_density,
         **alignAndFocusArgs)
+
+    sam_material = mtd[sam_wksp].sample().getMaterial().relativeMolecularMass()
+    sam_molecular_mass = sam_material.relativeMolecularMass()
+    natoms = get_number_atoms(
+        sam_packing_fraction,
+        sam_mass_density,
+        sam_molecular_mass,
+        Geometry=sam_geometry)
+
     sample_title = "sample_and_container"
-    print(os.path.join(OutputDir, sample_title + ".dat"))
-    print("HERE:", mtd[sam_wksp].getNumberHistograms())
-    print(grp_wksp)
     save_banks(InputWorkspace=sam_wksp,
                Filename=nexus_filename,
                Title=sample_title,
                OutputDir=OutputDir,
                GroupingWorkspace=grp_wksp,
                Binning=binning)
-
-    sam_molecular_mass = mtd[sam_wksp].sample(
-    ).getMaterial().relativeMolecularMass()
-    natoms = getNumberAtoms(
-        sam_packing_fraction,
-        sam_mass_density,
-        sam_molecular_mass,
-        Geometry=sam_geometry)
 
     # Load Sample Container
     print("#-----------------------------------#")
@@ -606,7 +441,7 @@ def TotalScatteringReduction(config=None):
 
     van_material = mtd[van_wksp].sample().getMaterial()
     van_molecular_mass = van_material.relativeMolecularMass()
-    nvan_atoms = getNumberAtoms(
+    nvan_atoms = get_number_atoms(
         1.0,
         van_mass_density,
         van_molecular_mass,
@@ -1280,30 +1115,40 @@ def TotalScatteringReduction(config=None):
             InputWorkspace=sam_corrected,
             OutputWorkspace=sam_corrected)
 
-    # F(Q) bank-by-bank Section
-    fq_banks_wksp = "FQ_banks_wksp"
-    CloneWorkspace(InputWorkspace=sam_corrected, OutputWorkspace=fq_banks_wksp)
-    # TODO: Add the following when implemented - FQ_banks = 'FQ_banks'
-
-    # S(Q) bank-by-bank Section
+    # Calculate the cross-section terms for S(Q) and F(Q) from DCS(Q)
     material = mtd[sam_corrected].sample().getMaterial()
     if material.name() is None or len(material.name().strip()) == 0:
         raise RuntimeError('Sample material was not set')
     bcoh_avg_sqrd = material.cohScatterLength() * material.cohScatterLength()
     btot_sqrd_avg = material.totalScatterLengthSqrd()
-    laue_monotonic_diffuse_scat = btot_sqrd_avg / bcoh_avg_sqrd
-    sq_banks_wksp = 'SQ_banks_wksp'
-    CloneWorkspace(InputWorkspace=sam_corrected, OutputWorkspace=sq_banks_wksp)
+    laue_term = btot_sqrd_avg / bcoh_avg_sqrd
 
-    # TODO: Add the following when implemented
-    '''
-    SQ_banks = (1. / bcoh_avg_sqrd) * \
-        mtd[sq_banks_wksp] - laue_monotonic_diffuse_scat + 1.
-    '''
+    print("<b>^2:", bcoh_avg_sqrd)
+    print("<b^2>:", btot_sqrd_avg)
+    print("Laue term:", laue_term)
+    print(
+        "sample total xsection:",
+        mtd[sam_corrected].sample().getMaterial().totalScatterXSection())
+    print(
+        "vanadium total xsection:",
+        mtd[van_corrected].sample().getMaterial().totalScatterXSection())
 
-    # Save S(Q) and F(Q) to diagnostics NeXus file
+    # Transform to each function from DCS
+    DCS_banks = mtd[sam_corrected]
+    FQ_banks = DCS_banks - btot_sqrd_avg
+    SQ_banks = (1. / bcoh_avg_sqrd) * DCS_banks - laue_term + 1.
+
+    # Save DCS(Q), S(Q) and F(Q) to diagnostics NeXus file
     save_banks(
-        InputWorkspace=fq_banks_wksp,
+        InputWorkspace=DCS_banks,
+        Filename=nexus_filename,
+        Title="DCS_banks",
+        OutputDir=OutputDir,
+        GroupingWorkspace=grp_wksp,
+        Binning=binning)
+
+    save_banks(
+        InputWorkspace=FQ_banks,
         Filename=nexus_filename,
         Title="FQ_banks",
         OutputDir=OutputDir,
@@ -1311,17 +1156,26 @@ def TotalScatteringReduction(config=None):
         Binning=binning)
 
     save_banks(
-        InputWorkspace=sq_banks_wksp,
+        InputWorkspace=SQ_banks,
         Filename=nexus_filename,
         Title="SQ_banks",
         OutputDir=OutputDir,
         GroupingWorkspace=grp_wksp,
         Binning=binning)
 
-    # Output a main S(Q) and F(Q) file
+    # Output a main DCS(Q), S(Q) and F(Q) file
+    dcs_filename = title + '_dcs_banks_corrected.nxs'
+    save_banks(
+        InputWorkspace=DCS_banks,
+        Filename=dcs_filename,
+        Title="DCS_banks",
+        OutputDir=OutputDir,
+        GroupingWorkspace=grp_wksp,
+        Binning=binning)
+
     fq_filename = title + '_fofq_banks_corrected.nxs'
     save_banks(
-        InputWorkspace=fq_banks_wksp,
+        InputWorkspace=FQ_banks,
         Filename=fq_filename,
         Title="FQ_banks",
         OutputDir=OutputDir,
@@ -1330,25 +1184,15 @@ def TotalScatteringReduction(config=None):
 
     sq_filename = title + '_sofq_banks_corrected.nxs'
     save_banks(
-        InputWorkspace=sq_banks_wksp,
+        InputWorkspace=SQ_banks,
         Filename=sq_filename,
         Title="SQ_banks",
         OutputDir=OutputDir,
         GroupingWorkspace=grp_wksp,
         Binning=binning)
 
-    # Print log information
-    print("<b>^2:", bcoh_avg_sqrd)
-    print("<b^2>:", btot_sqrd_avg)
-    print("Laue term:", laue_monotonic_diffuse_scat)
-    print(
-        "sample total xsection:",
-        mtd[sam_corrected].sample().getMaterial().totalScatterXSection())
-    print(
-        "vanadium total xsection:",
-        mtd[van_corrected].sample().getMaterial().totalScatterXSection())
-
     # Output Bragg Diffraction
+    print("Outputing Bragg...")
     ConvertUnits(
         InputWorkspace=sam_corrected,
         OutputWorkspace=sam_corrected,
