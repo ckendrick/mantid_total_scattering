@@ -9,7 +9,7 @@ ENV PYTHONPATH         ${MANTIDPATH}:${TSREPO}:${PYTHONPATH}
 # Install python dependencies
 RUN yum update -y && \
     yum install python3-pip curl git -y && \
-    pip3 install pytest codecov && \
+    pip3 install pytest codecov flake8 && \
     yum clean all
 
 # Copy Insturment geometry caches
