@@ -7,13 +7,14 @@ class TestUtilsForReduction(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_compress_ints(self):
+    def test_compress_ints_compression_needed(self):
         """ Test for expanding str to list of integers function
         """
         line_nums = [1, 2, 3, 8, 9, 12]
         target = "1-3, 8-9, 12"
         self.assertEqual(utils.compress_ints(line_nums), target)
 
+    def test_compress_ints_no_compression_needed(self):
         line_nums = [1, 6]
         target = "1, 6"
         self.assertEqual(utils.compress_ints(line_nums), target)
