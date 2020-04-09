@@ -14,6 +14,10 @@ class TestUtilsForReduction(unittest.TestCase):
         target = "1-3, 8-9, 12"
         self.assertEqual(utils.compress_ints(line_nums), target)
 
+        line_nums = [1, 6]
+        target = "1, 6"
+        self.assertEqual(utils.compress_ints(line_nums), target)
+
     def test_expand_ints(self):
         """ Test for expanding str to list of integers function
         """
