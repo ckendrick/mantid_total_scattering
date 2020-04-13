@@ -151,7 +151,7 @@ docker build -t unit-test-env -f .ci/Dockerfile . && docker run -t unit-test-env
 Lint:
 
 ```bash
-docker build -t unit-test-env -f .ci/Dockerfile . && docker run -t unit-test-env /bin/bash -c "mantidpython -m pytest"
+docker build -t unit-test-env -f .ci/Dockerfile . && docker run -t unit-test-env /bin/bash -c "mantidpython -m flake8"
 ```
 
 ### Pipenv + System install of Mantid Framework

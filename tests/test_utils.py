@@ -50,7 +50,7 @@ class TestUtilsForReduction(unittest.TestCase):
     def test_one_and_only_one_exception_raised(self):
         """ Test for the one and only one raises exception
         """
-        inputList = 100 
+        inputList = 100
         with self.assertRaises(Exception):
             utils.one_and_only_one(inputList)
 

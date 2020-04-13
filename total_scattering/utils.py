@@ -22,7 +22,6 @@ def compress_ints(line_nums):
     last = 0
 
     for index, val in enumerate(line_nums):
-
         if last + 1 == val or index == 0:
             seq.append(val)
             last = val
